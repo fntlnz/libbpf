@@ -1210,10 +1210,8 @@ void bpf_reloc_info_free(struct btf_reloc_info *info) {
 }
 
 // returns id for new btf instance
-static unsigned int btf_reloc_id_get(struct btf_reloc_info *info, unsigned int old) {
-	int new = 0;
-	hashmap__find(info->ids_map, int_as_hash_key(old), (void **)&new);
-	return new;
+static void btf_reloc_id_get(struct btf_reloc_info *info, unsigned int old, void** new) {
+	hashmap__find(info->ids_map, int_as_hash_key(old), new);
 }
 
 // adds new id map to the list of mappings
@@ -1406,12 +1404,12 @@ struct btf *bpf_reloc_info_get_btf(struct btf_reloc_info *info) {
 		switch (btf_kind(btf_type)) {
 		case BTF_KIND_STRUCT:
 		case BTF_KIND_UNION:
-			/*
 			for (int i = 0; i < btf_vlen(btf_type); i++) {
 				btf_member = btf_members(btf_type) + i;
-				btf_member->type = btf_reloc_id_get(info, btf_member->type);
+				int new = 0;
+				btf_reloc_id_get(info, btf_member->type, (void **)&new);
+				btf_member->type = new;
 			}
-			*/
 			break;
 		case BTF_KIND_PTR:
 		case BTF_KIND_TYPEDEF:
@@ -1420,23 +1418,29 @@ struct btf *bpf_reloc_info_get_btf(struct btf_reloc_info *info) {
 		case BTF_KIND_RESTRICT:
 		case BTF_KIND_FUNC:
 		case BTF_KIND_VAR:
-			//btf_type->type = btf_reloc_id_get(info, btf_type->type);
+			int new = 0;
+			btf_reloc_id_get(info, btf_type->type, (void **)&new);
+			btf_member->type = new;
 			break;
 		case BTF_KIND_ARRAY:
-			/*
 			array = btf_array(btf_type);
-			array->index_type = btf_reloc_id_get(info, array->index_type);
-			array->type = btf_reloc_id_get(info, array->type);
-			*/
+			int index_type = 0;
+			btf_reloc_id_get(info, array->index_type, (void **)&index_type);
+			array->index_type = index_type;
+			int array_type = 0;
+			btf_reloc_id_get(info, array->type, (void **)&array_type);
+			array->type = array_type;
 			break;
 		case BTF_KIND_FUNC_PROTO:
-			/*
-			btf_type->type = btf_reloc_id_get(info, btf_type->type);
+			int new_proto = 0;
+			btf_reloc_id_get(info, btf_type->type, (void **)&new_proto);
+			btf_type->type = new_proto;
 			params = btf_params(btf_type);
 			for (int i = 0; i < btf_vlen(btf_type); i++) {
-				params[i].type = btf_reloc_id_get(info, params[i].type);
+				int n = 0;
+				btf_reloc_id_get(info, params[i].type, (void **)&n);
+				params[i].type = n;
 			}
-			*/
 			break;
 		}
 	}
